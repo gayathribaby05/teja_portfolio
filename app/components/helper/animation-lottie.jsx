@@ -1,23 +1,31 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import lottie from 'lottie-web';
 
-const AnimationLottie = () => {
-  useEffect(() => {
-    // Ensure this runs only on the client side
-    if (typeof window !== 'undefined') {
-      lottie.loadAnimation({
-        container: document.getElementById('animation'), // Use the document object safely
-        renderer: 'svg',
-        loop: true,
-        autoplay: true,
-        path: 'data.json' // Path to your animation file
-      });
-    }
-  }, []);
+const AnimationLottie = ({ animationPath }) => {
+  const container = useRef(null);
+  const animation = useRef(null);
 
-  return <div id="animation" />;
+  useEffect(() => {
+    if (typeof window === 'undefined' || !container.current) return;
+
+    animation.current = lottie.loadAnimation({
+      container: container.current,
+      renderer: 'svg',
+      loop: true,
+      autoplay: true,
+      animationData: animationPath,
+    });
+
+    return () => {
+      if (animation.current) {
+        animation.current.destroy();
+      }
+    };
+  }, [animationPath]);
+
+  return <div ref={container} className="w-full h-full"></div>;
 };
 
 export default AnimationLottie;

@@ -1,8 +1,9 @@
 "use client";
-// @flow strict
+
 import { isValidEmail } from '@/utils/check-email';
+import emailjs from '@emailjs/browser';
 import axios from 'axios';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { TbMailForward } from "react-icons/tb";
 import { toast } from 'react-toastify';
 
@@ -14,6 +15,12 @@ function ContactWithoutCaptcha() {
     message: '',
   });
 
+  useEffect(() => {
+    if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY) {
+      emailjs.init(process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY);
+    }
+  }, []);
+
   const checkRequired = () => {
     if (userInput.email && userInput.message && userInput.name) {
       setError({ ...error, required: false });
@@ -22,21 +29,25 @@ function ContactWithoutCaptcha() {
 
   const handleSendMail = async (e) => {
     e.preventDefault();
+    
     if (!userInput.email || !userInput.message || !userInput.name) {
       setError({ ...error, required: true });
       return;
     } else if (error.email) {
       return;
-    } else {
-      setError({ ...error, required: false });
-    };
+    }
+    
+    setError({ ...error, required: false });
 
-    const serviceID = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID;
-    const templateID = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID;
-    const options = { publicKey: process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY };
+    if (typeof window === 'undefined') return;
 
     try {
-      const res = await emailjs.send(serviceID, templateID, userInput, options);
+      const res = await emailjs.send(
+        process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID,
+        process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID, 
+        userInput,
+      );
+      
       const teleRes = await axios.post(`${process.env.NEXT_PUBLIC_APP_URL}/api/contact`, userInput);
 
       if (res.status === 200 || teleRes.status === 200) {
@@ -46,10 +57,10 @@ function ContactWithoutCaptcha() {
           email: '',
           message: '',
         });
-      };
+      }
     } catch (error) {
-      toast.error(error?.text || error);
-    };
+      toast.error(error?.text || error.message || 'Failed to send message');
+    }
   };
 
   return (
@@ -89,9 +100,9 @@ function ContactWithoutCaptcha() {
                 setError({ ...error, email: !isValidEmail(userInput.email) });
               }}
             />
-            {error.email &&
+            {error.email && (
               <p className="text-sm text-red-400">Please provide a valid email!</p>
-            }
+            )}
           </div>
 
           <div className="flex flex-col gap-2">
@@ -108,11 +119,11 @@ function ContactWithoutCaptcha() {
             />
           </div>
           <div className="flex flex-col items-center gap-2">
-            {error.required &&
+            {error.required && (
               <p className="text-sm text-red-400">
                 Email and Message are required!
               </p>
-            }
+            )}
             <button
               className="flex items-center gap-1 hover:gap-3 rounded-full bg-gradient-to-r from-pink-500 to-violet-600 px-5 md:px-12 py-2.5 md:py-3 text-center text-xs md:text-sm font-medium uppercase tracking-wider text-white no-underline transition-all duration-200 ease-out hover:text-white hover:no-underline md:font-semibold"
               role="button"
@@ -126,6 +137,6 @@ function ContactWithoutCaptcha() {
       </div>
     </div>
   );
-};
+}
 
 export default ContactWithoutCaptcha;
